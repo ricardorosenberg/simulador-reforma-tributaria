@@ -49,11 +49,9 @@ if st.button("🧮 Calcular Análise Comparativa", type="primary", use_container
         st.error(m1 or m2)
         st.stop()
     if m1:
-        st.warning(f"**Cenário Atual:**
-{m1}")
+        st.warning("**Cenário Atual:**\n" + m1)
     if m2:
-        st.warning(f"**Cenário Otimizado:**
-{m2}")
+        st.warning("**Cenário Otimizado:**\n" + m2)
     
     c_atual = compute_scenario(faturamento_mensal, desp_atual, pl_atual, div_atual, num_pf, aliquota_irpj_csll, limite_dividendos_pf, aliquota_irrf_dividendos)
     c_otim = compute_scenario(faturamento_mensal, desp_otim, pl_otim, div_otim, num_pf, aliquota_irpj_csll, limite_dividendos_pf, aliquota_irrf_dividendos)
@@ -98,12 +96,12 @@ if st.button("🧮 Calcular Análise Comparativa", type="primary", use_container
     st.divider()
     st.subheader("💡 Insights e Recomendações")
     if c_atual["estourou_gatilho"] and not c_otim["estourou_gatilho"]:
-        st.success("Excelente! O cenário otimizado elimina o IRRF sobre dividendos, mantendo distribuição por PF abaixo do limite de R$ 50.000/mês.")
+        st.success("✅ Excelente! O cenário otimizado elimina o IRRF sobre dividendos, mantendo distribuição por PF abaixo do limite de R$ 50.000/mês.")
     elif c_atual["estourou_gatilho"] and c_otim["estourou_gatilho"]:
-        st.info("Oportunidade: Ambos os cenários ainda geram IRRF. Considere aumentar o número de sócios recebedores de dividendos, reduzir a distribuição mensal de dividendos ou aumentar despesas dedutíveis na PJ.")
+        st.info("ℹ️ Oportunidade: Ambos os cenários ainda geram IRRF. Considere aumentar o número de sócios, reduzir dividendos ou aumentar despesas dedutíveis na PJ.")
     
     if eco_mensal > 10_000:
-        st.success(f"Economia significativa! Você pode economizar {format_currency_brl(eco_anual)} por ano. Recomendamos consultar um contador para implementar essa estratégia.")
+        st.success(f"💰 Economia significativa! Você pode economizar {format_currency_brl(eco_anual)} por ano. Recomendamos consultar um contador.")
     
     st.divider()
-    st.caption("⚠️ DISCLAIMER: Este é um simulador educativo e não substitui consultoria contábil ou jurídica. Os cálculos são estimativas baseadas em parâmetros simplificados. Consulte sempre um profissional habilitado antes de tomar decisões fiscais. A legislação tributária pode mudar e casos específicos podem ter tratamento diferenciado.")
+    st.caption("⚠️ DISCLAIMER: Este é um simulador educativo e não substitui consultoria contábil ou jurídica. Os cálculos são estimativas baseadas em parâmetros simplificados. Consulte sempre um profissional habilitado antes de tomar decisões fiscais.")
