@@ -26,32 +26,32 @@ with col1:
     num_pf = st.number_input("Número de Sócios PF", 1, value=1, step=1)
 
 with col2:
-    st.subheader("📊 Cenário Atual")
-    desp_atual = st.number_input("Despesas Atuais (R$)", 0.0, value=50_000.0, step=5_000.0, key="da")
-    pl_atual = st.number_input("Pró-labore Atual (R$)", 0.0, value=15_000.0, step=1_000.0, key="pa")
-    div_atual = st.number_input("Dividendos Atuais (R$)", 0.0, value=150_000.0, step=5_000.0, key="di")
+    st.subheader("📊 Cenário Atual (como é feito o lançamento das despesas na PJ e a retirada para PF atualmente)")
+    desp_atual = st.number_input("Despesas Operacionais Atuais (despesas pagas e declaradas pela PJ) - R$", 0.0, value=50_000.0, step=5_000.0, key="da")
+    pl_atual = st.number_input("Pró-labore Atual (pró-labore declarado e pago oficialmente) - R$", 0.0, value=15_000.0, step=1_000.0, key="pa")
+    div_atual = st.number_input("Dividendos Mensais Atuais (transferência de lucros da PJ para PF) - R$", 0.0, value=150_000.0, step=5_000.0, key="di")
 
 st.divider()
-st.subheader("🎯 Cenário Otimizado")
+st.subheader("🎯 Cenário Otimizado (valores que ajustará para uma otimização da carga tributária)")
 c3, c4, c5 = st.columns(3)
 with c3:
-    desp_otim = st.number_input("Despesas Otimizadas (R$)", 0.0, value=80_000.0, step=5_000.0, key="do")
+    desp_otim = st.number_input("Despesas Operacionais Otimizadas (despesas pagas e declaradas pela PJ) - R$", 0.0, value=80_000.0, step=5_000.0, key="do")
 with c4:
-    pl_otim = st.number_input("Pró-labore Otimizado (R$)", 0.0, value=15_000.0, step=1_000.0, key="po")
+    pl_otim = st.number_input("Pró-labore Otimizado (pró-labore declarado e pago oficialmente) - R$", 0.0, value=15_000.0, step=1_000.0, key="po")
 with c5:
-    div_otim = st.number_input("Dividendos Otimizados (R$)", 0.0, value=130_000.0, step=5_000.0, key="divo")
+    div_otim = st.number_input("Dividendos Mensais Otimizados (transferência de lucros da PJ para PF) - R$", 0.0, value=130_000.0, step=5_000.0, key="divo")
 
 st.divider()
-if st.button("🧮 Calcular", type="primary", use_container_width=True):
+if st.button("🧮 Calcular Análise Comparativa", type="primary", use_container_width=True):
     v1, m1 = validate_inputs(faturamento_mensal, desp_atual, pl_atual, div_atual)
     v2, m2 = validate_inputs(faturamento_mensal, desp_otim, pl_otim, div_otim)
     if not v1 or not v2:
         st.error(m1 or m2)
         st.stop()
     if m1:
-        st.warning(f"Atual: {m1}")
+        st.warning(f"**Cenário Atual:**\n{m1}")
     if m2:
-        st.warning(f"Otimizado: {m2}")
+        st.warning(f"**Cenário Otimizado:**\n{m2}")
     
     c_atual = compute_scenario(faturamento_mensal, desp_atual, pl_atual, div_atual, num_pf, aliquota_irpj_csll, limite_dividendos_pf, aliquota_irrf_dividendos)
     c_otim = compute_scenario(faturamento_mensal, desp_otim, pl_otim, div_otim, num_pf, aliquota_irpj_csll, limite_dividendos_pf, aliquota_irrf_dividendos)
@@ -60,7 +60,7 @@ if st.button("🧮 Calcular", type="primary", use_container_width=True):
     eco_anual = eco_mensal * 12
     
     st.divider()
-    st.subheader("📈 KPIs")
+    st.subheader("📈 Indicadores-Chave (KPIs)")
     k1, k2, k3, k4, k5 = st.columns(5)
     k1.metric("Impostos Atual", format_currency_brl(c_atual["total_impostos"]))
     k2.metric("Impostos Otimizado", format_currency_brl(c_otim["total_impostos"]))
@@ -73,11 +73,11 @@ if st.button("🧮 Calcular", type="primary", use_container_width=True):
     st.markdown(generate_summary_text(c_atual, c_otim, eco_mensal, eco_anual, num_pf, limite_dividendos_pf))
     
     st.divider()
-    st.subheader("📊 Comparativo")
+    st.subheader("📊 Comparativo Detalhado")
     st.dataframe(create_comparison_table(c_atual, c_otim), use_container_width=True, hide_index=True)
     
     st.divider()
-    st.subheader("📊 Gráfico")
+    st.subheader("📊 Visualização: Impostos por Cenário")
     fig, ax = plt.subplots(figsize=(10, 6))
     cats = ["IRPJ+CSLL", "IRRF Div", "TOTAL"]
     v_atual = [c_atual["irpj_csll"], c_atual["irrf_dividendos"], c_atual["total_impostos"]]
@@ -94,4 +94,14 @@ if st.button("🧮 Calcular", type="primary", use_container_width=True):
     st.pyplot(fig)
     
     st.divider()
-    st.caption("⚠️ DISCLAIMER: Simulador educativo. Consulte um contador.")
+    st.subheader("💡 Insights e Recomendações")
+    if c_atual["estourou_gatilho"] and not c_otim["estourou_gatilho"]:
+        st.success("✅
+    elif c_atual["estourou_gatilho"] and c_otim["estourou_gatilho"]:
+        st.info("ℹ️ **Oportunidade:** Ambos os cenários ainda geram IRRF. Considere:\n- Aumentar o número de sócios recebedores de dividendos\n- Reduzir a distribuição mensal de dividendos\n- Aumentar despesas dedutíveis na PJ")
+    
+    if eco_mensal > 10_000:
+        st.success(f"💰
+    
+    st.divider()
+    st.caption("⚠️ **DISCLAIMER:** Este é um simulador educativo e não substitui consultoria contábil ou jurídica. Os cálculos são estimativas baseadas em parâmetros simplificados. Consulte sempre um profissional habilitado antes de tomar decisões fiscais. A legislação tributária pode mudar e casos específicos podem ter tratamento diferenciado.")
