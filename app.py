@@ -26,20 +26,31 @@ with col1:
     num_pf = st.number_input("Número de Sócios PF", 1, value=1, step=1)
 
 with col2:
-    st.subheader("📊 Cenário Atual (como é feito o lançamento das despesas na PJ e a retirada para PF atualmente)")
-    desp_atual = st.number_input("Despesas Operacionais Atuais (despesas pagas e declaradas pela PJ) - R$", 0.0, value=50_000.0, step=5_000.0, key="da")
-    pl_atual = st.number_input("Pró-labore Atual (pró-labore declarado e pago oficialmente) - R$", 0.0, value=15_000.0, step=1_000.0, key="pa")
-    div_atual = st.number_input("Dividendos Mensais Atuais (transferência de lucros da PJ para PF) - R$", 0.0, value=150_000.0, step=5_000.0, key="di")
+    st.markdown("### 📊 Cenário Atual <small style='font-size: 0.7em; color: #666;'>(como é feito o lançamento das despesas na PJ e a retirada para PF atualmente)</small>", unsafe_allow_html=True)
+    st.markdown("**Despesas Operacionais Atuais** <small style='font-size: 0.7em; color: #666;'>(despesas pagas e declaradas pela PJ)</small> **- R$**", unsafe_allow_html=True)
+    desp_atual = st.number_input("Valor", 0.0, value=50_000.0, step=5_000.0, key="da", label_visibility="collapsed")
+    
+    st.markdown("**Pró-labore Atual** <small style='font-size: 0.7em; color: #666;'>(pró-labore declarado e pago oficialmente)</small> **- R$**", unsafe_allow_html=True)
+    pl_atual = st.number_input("Valor", 0.0, value=15_000.0, step=1_000.0, key="pa", label_visibility="collapsed")
+    
+    st.markdown("**Dividendos Mensais Atuais** <small style='font-size: 0.7em; color: #666;'>(transferência de lucros da PJ para PF)</small> **- R$**", unsafe_allow_html=True)
+    div_atual = st.number_input("Valor", 0.0, value=150_000.0, step=5_000.0, key="di", label_visibility="collapsed")
 
 st.divider()
-st.subheader("🎯 Cenário Otimizado (valores que ajustará para uma otimização da carga tributária)")
+st.markdown("### 🎯 Cenário Otimizado <small style='font-size: 0.7em; color: #666;'>(valores que ajustará para uma otimização da carga tributária)</small>", unsafe_allow_html=True)
 c3, c4, c5 = st.columns(3)
+
 with c3:
-    desp_otim = st.number_input("Despesas Operacionais Otimizadas (despesas pagas e declaradas pela PJ) - R$", 0.0, value=80_000.0, step=5_000.0, key="do")
+    st.markdown("**Despesas Operacionais Otimizadas** <small style='font-size: 0.7em; color: #666;'>(despesas pagas e declaradas pela PJ)</small> **- R$**", unsafe_allow_html=True)
+    desp_otim = st.number_input("Valor", 0.0, value=80_000.0, step=5_000.0, key="do", label_visibility="collapsed")
+
 with c4:
-    pl_otim = st.number_input("Pró-labore Otimizado (pró-labore declarado e pago oficialmente) - R$", 0.0, value=15_000.0, step=1_000.0, key="po")
+    st.markdown("**Pró-labore Otimizado** <small style='font-size: 0.7em; color: #666;'>(pró-labore declarado e pago oficialmente)</small> **- R$**", unsafe_allow_html=True)
+    pl_otim = st.number_input("Valor", 0.0, value=15_000.0, step=1_000.0, key="po", label_visibility="collapsed")
+
 with c5:
-    div_otim = st.number_input("Dividendos Mensais Otimizados (transferência de lucros da PJ para PF) - R$", 0.0, value=130_000.0, step=5_000.0, key="divo")
+    st.markdown("**Dividendos Mensais Otimizados** <small style='font-size: 0.7em; color: #666;'>(transferência de lucros da PJ para PF)</small> **- R$**", unsafe_allow_html=True)
+    div_otim = st.number_input("Valor", 0.0, value=130_000.0, step=5_000.0, key="divo", label_visibility="collapsed")
 
 st.divider()
 if st.button("🧮 Calcular Análise Comparativa", type="primary", use_container_width=True):
