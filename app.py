@@ -1,7 +1,5 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import matplotlib.pyplot as plt
-import requests
 from datetime import datetime
 from utils import compute_scenario, validate_inputs, generate_summary_text, create_comparison_table, format_currency_brl
 
@@ -13,46 +11,25 @@ st.set_page_config(
 )
 
 # Google Analytics
-google_analytics = """
-<!-- Google tag (gtag.js) -->
+st.html("""
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-XFVCFPN1H6"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-
   gtag('config', 'G-XFVCFPN1H6');
-  
-  // Evento personalizado quando usuário calcula
-  function trackSimulation() {
-    gtag('event', 'simulation_calculated', {
-      'event_category': 'engagement',
-      'event_label': 'tax_simulation'
-    });
-  }
-  
-  // Evento de feedback
-  function trackFeedback() {
-    gtag('event', 'feedback_sent', {
-      'event_category': 'engagement',
-      'event_label': 'user_feedback'
-    });
-  }
 </script>
-"""
-components.html(google_analytics, height=0)
+""")
 
-# Função para registrar eventos customizados
-def track_event(event_name):
-    event_js = f"""
-    <script>
-        gtag('event', '{event_name}', {{
-            'event_category': 'user_action',
-            'event_label': 'streamlit_app'
-        }});
-    </script>
-    """
-    components.html(event_js, height=0)
+# EmailJS Library
+st.html("""
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<script type="text/javascript">
+   (function(){
+      emailjs.init("ZZRaJaP0r4vfr4mYV");
+   })();
+</script>
+""")
 
 # CSS customizado - Estilo Apple/Profissional
 st.markdown("""
@@ -314,8 +291,14 @@ with c5:
 st.divider()
 
 if st.button("🧮 Calcular Análise Comparativa", type="primary", use_container_width=True):
-    # Registrar evento no Google Analytics
-    track_event('simulation_calculated')
+    st.html("""
+    <script>
+        gtag('event', 'simulation_calculated', {
+            'event_category': 'engagement',
+            'event_label': 'tax_simulation'
+        });
+    </script>
+    """)
     
     v1, m1 = validate_inputs(faturamento_mensal, desp_atual, pl_atual, div_atual)
     v2, m2 = validate_inputs(faturamento_mensal, desp_otim, pl_otim, div_otim)
@@ -412,49 +395,64 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-with st.form("feedback_form"):
-    col_f1, col_f2 = st.columns(2)
-    
-    with col_f1:
-        nome = st.text_input("Nome (opcional)", placeholder="Seu nome")
-        email = st.text_input("E-mail (opcional)", placeholder="seu@email.com")
-    
-    with col_f2:
-        cidade = st.text_input("Cidade/Estado (opcional)", placeholder="Ex: São Paulo - SP")
-        profissao = st.text_input("Profissão (opcional)", placeholder="Ex: Médico, Contador")
-    
-    sugestao = st.text_area(
-        "Sua sugestão, crítica ou ideia de melhoria:",
-        placeholder="Conte-nos o que você achou, o que poderia ser melhorado, quais funcionalidades gostaria de ver...",
-        height=150
-    )
-    
-    submitted = st.form_submit_button("📤 Enviar Feedback", use_container_width=True)
-    
-    if submitted:
-        if sugestao.strip():
-            try:
-                response = requests.post(
-                    "https://formsubmit.co/ajax/ricardosrosenberg@gmail.com",
-                    data={
-                        "nome": nome or "Anônimo",
-                        "email": email or "Não informado",
-                        "cidade": cidade or "Não informado",
-                        "profissao": profissao or "Não informado",
-                        "sugestao": sugestao,
-                        "_subject": "Nova Sugestão - Simulador Reforma Tributária",
-                        "_template": "box"
-                    }
-                )
-                if response.status_code == 200:
-                    st.success("✅ Feedback enviado com sucesso! Muito obrigado pela sua contribuição! 🎉")
-                    track_event('feedback_sent')
-                else:
-                    st.error("❌ Erro ao enviar feedback. Tente novamente mais tarde.")
-            except:
-                st.error("❌ Erro de conexão. Verifique sua internet e tente novamente.")
-        else:
-            st.warning("⚠️ Por favor, escreva sua sugestão antes de enviar.")
+# Campos do formulário
+col_f1, col_f2 = st.columns(2)
+
+with col_f1:
+    nome = st.text_input("Nome (opcional)", placeholder="Seu nome", key="nome_input")
+    email_user = st.text_input("E-mail (opcional)", placeholder="seu@email.com", key="email_input")
+
+with col_f2:
+    cidade = st.text_input("Cidade/Estado (opcional)", placeholder="Ex: São Paulo - SP", key="cidade_input")
+    profissao = st.text_input("Profissão (opcional)", placeholder="Ex: Médico, Contador", key="prof_input")
+
+sugestao = st.text_area(
+    "Sua sugestão, crítica ou ideia de melhoria:",
+    placeholder="Conte-nos o que você achou, o que poderia ser melhorado, quais funcionalidades gostaria de ver...",
+    height=150,
+    key="sugestao_input"
+)
+
+# Container para mensagens
+message_container = st.empty()
+
+if st.button("📤 Enviar Feedback", use_container_width=True, key="btn_feedback"):
+    if sugestao.strip():
+        # Limpar e escapar dados
+        nome_clean = nome.replace("'", "\\'").replace('"', '\\"').replace("\n", " ") if nome else "Anônimo"
+        email_clean = email_user.replace("'", "\\'").replace('"', '\\"') if email_user else "Não informado"
+        cidade_clean = cidade.replace("'", "\\'").replace('"', '\\"') if cidade else "Não informado"
+        profissao_clean = profissao.replace("'", "\\'").replace('"', '\\"') if profissao else "Não informado"
+        sugestao_clean = sugestao.replace("'", "\\'").replace('"', '\\"').replace("\n", "\\n")
+        
+        # Enviar via EmailJS
+        st.html(f"""
+        <script>
+            emailjs.send('service_tsbp6kf', 'template_il9i7r6', {{
+                nome: '{nome_clean}',
+                email: '{email_clean}',
+                cidade: '{cidade_clean}',
+                profissao: '{profissao_clean}',
+                sugestao: '{sugestao_clean}'
+            }}).then(
+                function(response) {{
+                    console.log('✅ Email enviado com sucesso!', response.status, response.text);
+                    gtag('event', 'feedback_sent', {{
+                        'event_category': 'engagement',
+                        'event_label': 'user_feedback'
+                    }});
+                }},
+                function(error) {{
+                    console.log('❌ Erro ao enviar email:', error);
+                }}
+            );
+        </script>
+        """)
+        
+        message_container.success("✅ Feedback enviado com sucesso! Muito obrigado pela sua contribuição! 🎉")
+        st.balloons()
+    else:
+        message_container.warning("⚠️ Por favor, escreva sua sugestão antes de enviar.")
 
 st.divider()
 st.caption("⚠️ **DISCLAIMER:** Este é um simulador educativo e não substitui consultoria contábil ou jurídica.")
