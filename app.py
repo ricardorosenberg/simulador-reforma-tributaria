@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import matplotlib.pyplot as plt
 import smtplib
 from email.mime.text import MIMEText
@@ -13,23 +14,34 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Plausible Analytics
+components.html(
+    """
+    <!-- Privacy-friendly analytics by Plausible -->
+    <script async src="https://plausible.io/js/pa-A5dsGG_WKzf8v3a7hqgyH.js"></script>
+    <script>
+      window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+      plausible.init();
+      console.log('✅ Plausible Analytics inicializado');
+    </script>
+    """,
+    height=0,
+)
+
 # Função para enviar email
 def send_email(nome, email, cidade, profissao, sugestao):
     try:
-        # Pegar credenciais dos secrets
         smtp_server = st.secrets["email"]["smtp_server"]
         smtp_port = st.secrets["email"]["smtp_port"]
         sender_email = st.secrets["email"]["sender_email"]
         sender_password = st.secrets["email"]["sender_password"]
         receiver_email = st.secrets["email"]["receiver_email"]
         
-        # Criar mensagem
         message = MIMEMultipart("alternative")
         message["Subject"] = "Nova Sugestão - Simulador Reforma Tributária"
         message["From"] = sender_email
         message["To"] = receiver_email
         
-        # Corpo do email em HTML
         html = f"""
         <html>
           <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -73,7 +85,6 @@ def send_email(nome, email, cidade, profissao, sugestao):
         part = MIMEText(html, "html")
         message.attach(part)
         
-        # Enviar email
         with smtplib.SMTP(smtp_server, smtp_port) as server:
             server.starttls()
             server.login(sender_email, sender_password)
@@ -83,6 +94,25 @@ def send_email(nome, email, cidade, profissao, sugestao):
     
     except Exception as e:
         return False, f"Erro ao enviar email: {str(e)}"
+
+# Função para rastrear eventos customizados
+def track_event(event_name, props=None):
+    props_js = ""
+    if props:
+        props_items = [f"'{k}': '{v}'" for k, v in props.items()]
+        props_js = f", {{{', '.join(props_items)}}}"
+    
+    components.html(
+        f"""
+        <script>
+            if (window.plausible) {{
+                plausible('{event_name}'{props_js});
+                console.log('✅ Evento rastreado: {event_name}');
+            }}
+        </script>
+        """,
+        height=0,
+    )
 
 # CSS customizado
 st.markdown("""
@@ -362,6 +392,12 @@ if st.button("🧮 Calcular Análise Comparativa", type="primary", use_container
     eco_mensal = c_atual["total_impostos"] - c_otim["total_impostos"]
     eco_anual = eco_mensal * 12
     
+    # Rastrear evento de simulação
+    track_event('Simulação Calculada', {
+        'economia_mensal': int(eco_mensal),
+        'num_socios': num_pf
+    })
+    
     st.divider()
     st.markdown("<div class='section-header'><h2 style='margin:0;'>📈 Indicadores-Chave (KPIs)</h2></div>", unsafe_allow_html=True)
     
@@ -468,6 +504,8 @@ if st.button("📤 Enviar Feedback", use_container_width=True, key="btn_feedback
             )
         
         if success:
+            # Rastrear evento de feedback
+            track_event('Feedback Enviado')
             st.success("✅ Feedback enviado com sucesso! Muito obrigado pela sua contribuição! 🎉")
             st.balloons()
         else:
