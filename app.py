@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import matplotlib.pyplot as plt
 from datetime import datetime
 from utils import compute_scenario, validate_inputs, generate_summary_text, create_comparison_table, format_currency_brl
@@ -10,26 +11,38 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Google Analytics
-st.html("""
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-XFVCFPN1H6"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-XFVCFPN1H6');
-</script>
-""")
+# Google Analytics - Usando components.html que é mais confiável
+components.html(
+    """
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XFVCFPN1H6"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XFVCFPN1H6', {
+        'page_title': 'Simulador Reforma Tributária',
+        'page_path': window.location.pathname
+      });
+      console.log('✅ Google Analytics inicializado - ID: G-XFVCFPN1H6');
+    </script>
+    """,
+    height=0,
+)
 
 # EmailJS Library
-st.html("""
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-<script type="text/javascript">
-   (function(){
-      emailjs.init("ZZRaJaP0r4vfr4mYV");
-   })();
-</script>
-""")
+components.html(
+    """
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script type="text/javascript">
+       (function(){
+          emailjs.init("ZZRaJaP0r4vfr4mYV");
+          console.log('✅ EmailJS inicializado');
+       })();
+    </script>
+    """,
+    height=0,
+)
 
 # CSS customizado - Estilo Apple/Profissional
 st.markdown("""
@@ -291,14 +304,21 @@ with c5:
 st.divider()
 
 if st.button("🧮 Calcular Análise Comparativa", type="primary", use_container_width=True):
-    st.html("""
-    <script>
-        gtag('event', 'simulation_calculated', {
-            'event_category': 'engagement',
-            'event_label': 'tax_simulation'
-        });
-    </script>
-    """)
+    # Evento Google Analytics
+    components.html(
+        """
+        <script>
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'simulation_calculated', {
+                    'event_category': 'engagement',
+                    'event_label': 'tax_simulation'
+                });
+                console.log('✅ Evento simulação enviado ao GA');
+            }
+        </script>
+        """,
+        height=0,
+    )
     
     v1, m1 = validate_inputs(faturamento_mensal, desp_atual, pl_atual, div_atual)
     v2, m2 = validate_inputs(faturamento_mensal, desp_otim, pl_otim, div_otim)
@@ -413,41 +433,45 @@ sugestao = st.text_area(
     key="sugestao_input"
 )
 
-# Container para mensagens
 message_container = st.empty()
 
 if st.button("📤 Enviar Feedback", use_container_width=True, key="btn_feedback"):
     if sugestao.strip():
-        # Limpar e escapar dados
         nome_clean = nome.replace("'", "\\'").replace('"', '\\"').replace("\n", " ") if nome else "Anônimo"
         email_clean = email_user.replace("'", "\\'").replace('"', '\\"') if email_user else "Não informado"
         cidade_clean = cidade.replace("'", "\\'").replace('"', '\\"') if cidade else "Não informado"
         profissao_clean = profissao.replace("'", "\\'").replace('"', '\\"') if profissao else "Não informado"
         sugestao_clean = sugestao.replace("'", "\\'").replace('"', '\\"').replace("\n", "\\n")
         
-        # Enviar via EmailJS
-        st.html(f"""
-        <script>
-            emailjs.send('service_tsbp6kf', 'template_il9i7r6', {{
-                nome: '{nome_clean}',
-                email: '{email_clean}',
-                cidade: '{cidade_clean}',
-                profissao: '{profissao_clean}',
-                sugestao: '{sugestao_clean}'
-            }}).then(
-                function(response) {{
-                    console.log('✅ Email enviado com sucesso!', response.status, response.text);
-                    gtag('event', 'feedback_sent', {{
-                        'event_category': 'engagement',
-                        'event_label': 'user_feedback'
-                    }});
-                }},
-                function(error) {{
-                    console.log('❌ Erro ao enviar email:', error);
+        components.html(
+            f"""
+            <script>
+                if (typeof emailjs !== 'undefined') {{
+                    emailjs.send('service_tsbp6kf', 'template_il9i7r6', {{
+                        nome: '{nome_clean}',
+                        email: '{email_clean}',
+                        cidade: '{cidade_clean}',
+                        profissao: '{profissao_clean}',
+                        sugestao: '{sugestao_clean}'
+                    }}).then(
+                        function(response) {{
+                            console.log('✅ Email enviado!', response.status);
+                            if (typeof gtag !== 'undefined') {{
+                                gtag('event', 'feedback_sent', {{
+                                    'event_category': 'engagement',
+                                    'event_label': 'user_feedback'
+                                }});
+                            }}
+                        }},
+                        function(error) {{
+                            console.log('❌ Erro:', error);
+                        }}
+                    );
                 }}
-            );
-        </script>
-        """)
+            </script>
+            """,
+            height=0,
+        )
         
         message_container.success("✅ Feedback enviado com sucesso! Muito obrigado pela sua contribuição! 🎉")
         st.balloons()
