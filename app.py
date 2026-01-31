@@ -1,6 +1,8 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import matplotlib.pyplot as plt
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 from utils import compute_scenario, validate_inputs, generate_summary_text, create_comparison_table, format_currency_brl
 
@@ -11,40 +13,78 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Google Analytics - Usando components.html que é mais confiável
-components.html(
-    """
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XFVCFPN1H6"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-XFVCFPN1H6', {
-        'page_title': 'Simulador Reforma Tributária',
-        'page_path': window.location.pathname
-      });
-      console.log('✅ Google Analytics inicializado - ID: G-XFVCFPN1H6');
-    </script>
-    """,
-    height=0,
-)
+# Função para enviar email
+def send_email(nome, email, cidade, profissao, sugestao):
+    try:
+        # Pegar credenciais dos secrets
+        smtp_server = st.secrets["email"]["smtp_server"]
+        smtp_port = st.secrets["email"]["smtp_port"]
+        sender_email = st.secrets["email"]["sender_email"]
+        sender_password = st.secrets["email"]["sender_password"]
+        receiver_email = st.secrets["email"]["receiver_email"]
+        
+        # Criar mensagem
+        message = MIMEMultipart("alternative")
+        message["Subject"] = "Nova Sugestão - Simulador Reforma Tributária"
+        message["From"] = sender_email
+        message["To"] = receiver_email
+        
+        # Corpo do email em HTML
+        html = f"""
+        <html>
+          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #1e3a5f;">💬 Nova Sugestão Recebida!</h2>
+            <hr style="border: 1px solid #e2e8f0;">
+            
+            <h3 style="color: #2c5282;">📋 Dados do Usuário</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px; background: #f8fafc;"><strong>Nome:</strong></td>
+                <td style="padding: 8px;">{nome}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; background: #f8fafc;"><strong>E-mail:</strong></td>
+                <td style="padding: 8px;">{email}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; background: #f8fafc;"><strong>Cidade:</strong></td>
+                <td style="padding: 8px;">{cidade}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; background: #f8fafc;"><strong>Profissão:</strong></td>
+                <td style="padding: 8px;">{profissao}</td>
+              </tr>
+            </table>
+            
+            <h3 style="color: #2c5282; margin-top: 20px;">💡 Sugestão/Feedback</h3>
+            <div style="background: #f0f9ff; border-left: 4px solid #1e3a5f; padding: 15px; margin: 10px 0;">
+              {sugestao.replace('\n', '<br>')}
+            </div>
+            
+            <hr style="border: 1px solid #e2e8f0; margin-top: 30px;">
+            <p style="color: #64748b; font-size: 0.9em;">
+              🤖 Enviado automaticamente pelo Simulador Reforma Tributária 2026<br>
+              📅 {datetime.now().strftime('%d/%m/%Y às %H:%M')}
+            </p>
+          </body>
+        </html>
+        """
+        
+        part = MIMEText(html, "html")
+        message.attach(part)
+        
+        # Enviar email
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(sender_email, sender_password)
+            server.send_message(message)
+        
+        return True, "Email enviado com sucesso!"
+    
+    except Exception as e:
+        return False, f"Erro ao enviar email: {str(e)}"
 
-# EmailJS Library
-components.html(
-    """
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    <script type="text/javascript">
-       (function(){
-          emailjs.init("ZZRaJaP0r4vfr4mYV");
-          console.log('✅ EmailJS inicializado');
-       })();
-    </script>
-    """,
-    height=0,
-)
-
-# CSS customizado - Estilo Apple/Profissional
+# CSS customizado
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -304,22 +344,6 @@ with c5:
 st.divider()
 
 if st.button("🧮 Calcular Análise Comparativa", type="primary", use_container_width=True):
-    # Evento Google Analytics
-    components.html(
-        """
-        <script>
-            if (typeof gtag !== 'undefined') {
-                gtag('event', 'simulation_calculated', {
-                    'event_category': 'engagement',
-                    'event_label': 'tax_simulation'
-                });
-                console.log('✅ Evento simulação enviado ao GA');
-            }
-        </script>
-        """,
-        height=0,
-    )
-    
     v1, m1 = validate_inputs(faturamento_mensal, desp_atual, pl_atual, div_atual)
     v2, m2 = validate_inputs(faturamento_mensal, desp_otim, pl_otim, div_otim)
     
@@ -415,7 +439,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Campos do formulário
 col_f1, col_f2 = st.columns(2)
 
 with col_f1:
@@ -433,50 +456,24 @@ sugestao = st.text_area(
     key="sugestao_input"
 )
 
-message_container = st.empty()
-
 if st.button("📤 Enviar Feedback", use_container_width=True, key="btn_feedback"):
     if sugestao.strip():
-        nome_clean = nome.replace("'", "\\'").replace('"', '\\"').replace("\n", " ") if nome else "Anônimo"
-        email_clean = email_user.replace("'", "\\'").replace('"', '\\"') if email_user else "Não informado"
-        cidade_clean = cidade.replace("'", "\\'").replace('"', '\\"') if cidade else "Não informado"
-        profissao_clean = profissao.replace("'", "\\'").replace('"', '\\"') if profissao else "Não informado"
-        sugestao_clean = sugestao.replace("'", "\\'").replace('"', '\\"').replace("\n", "\\n")
+        with st.spinner("Enviando..."):
+            success, message = send_email(
+                nome or "Anônimo",
+                email_user or "Não informado",
+                cidade or "Não informado",
+                profissao or "Não informado",
+                sugestao
+            )
         
-        components.html(
-            f"""
-            <script>
-                if (typeof emailjs !== 'undefined') {{
-                    emailjs.send('service_tsbp6kf', 'template_il9i7r6', {{
-                        nome: '{nome_clean}',
-                        email: '{email_clean}',
-                        cidade: '{cidade_clean}',
-                        profissao: '{profissao_clean}',
-                        sugestao: '{sugestao_clean}'
-                    }}).then(
-                        function(response) {{
-                            console.log('✅ Email enviado!', response.status);
-                            if (typeof gtag !== 'undefined') {{
-                                gtag('event', 'feedback_sent', {{
-                                    'event_category': 'engagement',
-                                    'event_label': 'user_feedback'
-                                }});
-                            }}
-                        }},
-                        function(error) {{
-                            console.log('❌ Erro:', error);
-                        }}
-                    );
-                }}
-            </script>
-            """,
-            height=0,
-        )
-        
-        message_container.success("✅ Feedback enviado com sucesso! Muito obrigado pela sua contribuição! 🎉")
-        st.balloons()
+        if success:
+            st.success("✅ Feedback enviado com sucesso! Muito obrigado pela sua contribuição! 🎉")
+            st.balloons()
+        else:
+            st.error(f"❌ {message}")
     else:
-        message_container.warning("⚠️ Por favor, escreva sua sugestão antes de enviar.")
+        st.warning("⚠️ Por favor, escreva sua sugestão antes de enviar.")
 
 st.divider()
 st.caption("⚠️ **DISCLAIMER:** Este é um simulador educativo e não substitui consultoria contábil ou jurídica.")
